@@ -147,7 +147,7 @@ if __name__ == '__main__':
                     # ----------------------------------------------------------
                     # get the difference in temps; will be positive if we
                     # overshot
-                    diff = conf.target_temp_fahrenheit - min_temp
+                    diff = (conf.target_temp_fahrenheit - conf.temp_pad) - min_temp
                     # multiply by 10 for a rough estimate of the amount of
                     # change in seconds
                     #   .01*f -> .03s
