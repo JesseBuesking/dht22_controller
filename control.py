@@ -143,6 +143,9 @@ if __name__ == '__main__':
                 logging.debug('temp is now increasing. min={:.2f}'.format(min_temp))
 
                 if learn:
+                    # save what we learned
+                    learn_cool.save_cool(cool_seconds, min_temp)
+                    
                     # learn the correct amount of time to wait
                     # ----------------------------------------------------------
                     # get the difference in temps; will be positive if we
@@ -157,8 +160,6 @@ if __name__ == '__main__':
                     # update the number of seconds to cool for
                     cool_seconds = cool_seconds - diff
                     cool_seconds = util.clip(cool_seconds, 10., 60. * 5.)
-                    # save what we learned
-                    learn_cool.save_cool(cool_seconds, min_temp)
             else:
                 g.output(conf.cool_pin, OFF)
 
