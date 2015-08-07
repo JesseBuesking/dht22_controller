@@ -37,5 +37,7 @@ def save_cool(seconds, min_temp):
             '{:.1f}'.format(seconds),
             # min_temp achieved
             '{:.2f}'.format(min_temp),
-            # current emperature padding
-            '{:.1f}'.format(conf.temp_pad)])
+            # current temperature padding
+            '{:.1f}'.format(conf.temp_pad),
+            # current temperature
+            '{:.1f}'.format(conf.target_temp_fahrenheit)])
