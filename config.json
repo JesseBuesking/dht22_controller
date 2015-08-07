@@ -1,7 +1,7 @@
 {
     "pin": 5,
     "target_temp_fahrenheit": 60,
-    "temp_pad": 2,
+    "temp_pad": 1,
     "target_humidity": 70,
     "humidity_pad": 2,
     "cool_pin": 17,
