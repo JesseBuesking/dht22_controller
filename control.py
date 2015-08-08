@@ -116,18 +116,23 @@ if __name__ == '__main__':
             if temperature.cooling:
                 # we need to cool, so turn on the cooler on wait for a bit
                 cool_for = cool_seconds
-                max_temp = conf.target_temp_fahrenheit + conf.temp_pad
-                temp_diff = abs(temperature.average() - max_temp)
+                min_temp = conf.target_temp_fahrenheit - conf.temp_pad
+                temp_diff = temperature.average() - min_temp
                 learn = True
                 if temp_diff > .2:
                     # we're really warm, so the cooler might be turning on
                     # for the first time, the power went out, etc. So we need
                     # to run for longer.
                     learn = False
-                    # use the normal amount, plus 80% of the remaining
-                    cool_for = cool_seconds + ((temp_diff * cool_seconds) * .8)
+                    # cool_for should be the seconds to cool for each degree,
+                    # and since we typically cool down by conf.temp_pad * 2.,
+                    # we need to divide by that amount to get the number of
+                    # seconds per degree
+                    cool_for = cool_seconds / (conf.temp_pad * 2.)
+                    # use an 90% multiplier so it doesn't overcool
+                    cool_for = temp_diff * cool_for * .9
 
-                logging.debug('cool_seconds={:.1f},cool_for={:.1f},max_temp={:.2f}'.format(cool_seconds, cool_for, max_temp))
+                logging.debug('cool_seconds={:.1f},cool_for={:.1f},min_temp={:.2f}'.format(cool_seconds, cool_for, min_temp))
                 g.output(conf.cool_pin, ON)
                 while cool_for > 0:
                     time.sleep(1 if cool_for > 1 else cool_for)
@@ -145,7 +150,7 @@ if __name__ == '__main__':
                 if learn:
                     # save what we learned
                     learn_cool.save_cool(cool_seconds, min_temp)
-                    
+
                     # learn the correct amount of time to wait
                     # ----------------------------------------------------------
                     # get the difference in temps; will be positive if we
