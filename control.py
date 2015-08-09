@@ -116,8 +116,8 @@ if __name__ == '__main__':
             if temperature.cooling:
                 # we need to cool, so turn on the cooler on wait for a bit
                 cool_for = cool_seconds
-                min_temp = conf.target_temp_fahrenheit - conf.temp_pad
-                temp_diff = temperature.average() - min_temp
+                max_temp = conf.target_temp_fahrenheit + conf.temp_pad
+                temp_diff = temperature.average() - max_temp
                 learn = True
                 if temp_diff > .2:
                     # we're really warm, so the cooler might be turning on
@@ -132,7 +132,7 @@ if __name__ == '__main__':
                     # use an 90% multiplier so it doesn't overcool
                     cool_for = temp_diff * cool_for * .9
 
-                logging.debug('cool_seconds={:.1f},cool_for={:.1f},min_temp={:.2f}'.format(cool_seconds, cool_for, min_temp))
+                logging.debug('cool_seconds={:.1f},cool_for={:.1f},max_temp={:.2f}'.format(cool_seconds, cool_for, max_temp))
                 g.output(conf.cool_pin, ON)
                 while cool_for > 0:
                     time.sleep(1 if cool_for > 1 else cool_for)
