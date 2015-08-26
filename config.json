@@ -1,6 +1,6 @@
 {
     "pin": 5,
-    "target_temp_fahrenheit": 60,
+    "target_temp_fahrenheit": 64,
     "temp_pad": 1,
     "target_humidity": 70,
     "humidity_pad": 2,
