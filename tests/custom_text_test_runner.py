@@ -8,11 +8,12 @@ import os
 import re
 import StringIO
 import sys
-from termcolor import colored
+from bbds.utils.color import *
 import time
 import unittest
 from xml.sax import saxutils
 from wwtw import *
+from bbds import config
 
 
 def get_terminal_size():
@@ -181,23 +182,38 @@ def conditional_color(value, color, just=5):
         return ljust(str(value), just)
 
 
+def getreg(value, REG):
+    """ parses out data from value that's in the format supplied by REG """
+    result = re.search(REG, value)
+    if result is None or not hasattr(result, 'groups'): return None
+    if len(result.groups()) <= 0: return None
+    return result.groups()[0]
+
+
+def rmreg(value, REG):
+    """ removes data from value that's in the format supplied by REG """
+    return re.sub(r'(?:^|\n).*?' + REG + r'.*?(?:$|\n)', '\n', value)
+
+
+PERFRE = r'\[PERF .*?(\d{2}:\d{2}:\d{2}(\.\d+)?).*?\]'
 def getperf(value):
     """ parses out the "[PERF 00:00:00.000]" string from the value if it's there """
-    perf = re.search(r'\[PERF .*?(\d{2}:\d{2}:\d{2}(\.\d+)?).*?\]', value)
-    if perf is None or not hasattr(perf, 'groups'): return None
-    if len(perf.groups()) <= 0: return None
-    return perf.groups()[0]
+    return getreg(value, PERFRE)
+
+def rmperf(value):
+    return rmreg(value, PERFRE)
+
+SLOWRE = r'(skipped \'slow\')'
+def getslow(value):
+    """ parses out the "skipped 'slow'" string from the value if it's there """
+    return getreg(value, SLOWRE)
+
+def rmslow(value):
+    return rmreg(value, SLOWRE)
 
 def isskipped(value):
     """ parses out the "skipped 'slow'" string from the value if it's there """
     return 'skipped' in value
-
-def getslow(value):
-    """ parses out the "skipped 'slow'" string from the value if it's there """
-    slow = re.search(r'(skipped \'slow\')', value)
-    if slow is None or not hasattr(slow, 'groups'): return None
-    if len(slow.groups()) <= 0: return None
-    return slow.groups()[0]
 
 def removecolors(value):
     ansi_escape = re.compile(r'\x1b[^m]*m')
@@ -404,6 +420,8 @@ class CustomTextTestRunner(object):
             skipped = isskipped(ue)
 
         row = ljust('  ' + desc, 40)
+        o = rmperf(o)
+        o = rmslow(o)
 
         def getstatus(n):
             if skipped:
@@ -441,6 +459,13 @@ class CustomTextTestRunner(object):
             error += '\n    {}'.format(ue.replace('\n', '\n    '))
             error += '\n' + '='*width
             row += colored(error, 'magenta')
+
+        # append anything that might have been written to stdout
+        if o.rstrip() != '':
+            row += '\n' + o.rstrip()
+
+        if config.ISWINDOWS:
+            row += '\n'
 
         rows.append(row)
         if not has_output:

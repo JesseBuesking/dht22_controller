@@ -9,7 +9,8 @@ import RPi.GPIO as g
 from dht22_controller.config import Config
 from dht22_controller.temperature import Temperature, c_to_f
 from dht22_controller.humidity import Humidity
-from dht22_controller import learn_cool, util
+from dht22_controller import learn_cool
+from dht22_controller.utils import clip
 import logging
 logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
 
@@ -36,7 +37,7 @@ if conf.humidity_pin is not None:
     g.setup(conf.humidity_pin, g.OUT)
 
 
-cool_seconds = util.clip(
+cool_seconds = clip(
     learn_cool.load_last_cool(default_seconds=30.),
     # at least 10 seconds
     10.,
@@ -116,7 +117,7 @@ if __name__ == '__main__':
             if temperature.cooling:
                 # we need to cool, so turn on the cooler on wait for a bit
                 cool_for = cool_seconds
-                max_temp = conf.target_temp_fahrenheit + conf.temp_pad
+                max_temp = conf.target_temp_f + conf.temp_pad
                 temp_diff = temperature.average() - max_temp
                 learn = True
                 if temp_diff > .2:
@@ -155,7 +156,7 @@ if __name__ == '__main__':
                     # ----------------------------------------------------------
                     # get the difference in temps; will be positive if we
                     # overshot
-                    diff = (conf.target_temp_fahrenheit - conf.temp_pad) - min_temp
+                    diff = (conf.target_temp_f - conf.temp_pad) - min_temp
                     # multiply by 10 for a rough estimate of the amount of
                     # change in seconds
                     #   .01*f -> .03s
@@ -164,7 +165,7 @@ if __name__ == '__main__':
                     diff *= 3.
                     # update the number of seconds to cool for
                     cool_seconds = cool_seconds - diff
-                    cool_seconds = util.clip(cool_seconds, 10., 60. * 5.)
+                    cool_seconds = clip(cool_seconds, 10., 60. * 5.)
             else:
                 g.output(conf.cool_pin, OFF)
 

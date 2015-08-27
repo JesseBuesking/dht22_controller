@@ -40,4 +40,4 @@ def save_cool(seconds, min_temp):
             # current temperature padding
             '{:.1f}'.format(conf.temp_pad),
             # current temperature
-            '{:.1f}'.format(conf.target_temp_fahrenheit)])
+            '{:.1f}'.format(conf.target_temp_f)])
