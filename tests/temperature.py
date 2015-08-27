@@ -133,6 +133,7 @@ class TemperatureTests(TestBase):
         increasing = True
 
         i = e = 0
+        works = False
         while i < 10000:
             i += 1
             last_temp = temp_gen(last_temp, increasing)
@@ -144,9 +145,41 @@ class TemperatureTests(TestBase):
                 minimum = t.temperature_average_f() - temp_by_s(t.cool_for_s)
                 last_temp = minimum
                 if abs(minimum - c.min_temp_f) < .05:
-                    print('NOTE: steady after {} learned updates'.format(e))
-                    self.assertTrue(True)
+                    works = True
                     break
                 [t.add(minimum + j*.01) for j in range(t.queue.cap)]
                 t.cooling_on = False
                 t.waiting_for_temp_increase = True
+
+        self.assertTrue(works, msg="Failed to learn the correct temperature.")
+        print('NOTE: cooling steady after {} learned updates'.format(e))
+
+    def test_learns_heat_for_time(self):
+        t = Temperature(c, debug=True, has_heater=True)
+        last_temp = 60.
+        t.add(last_temp)
+        t.update()
+
+        increasing = False
+
+        i = e = 0
+        works = False
+        while i < 10000:
+            i += 1
+            last_temp = temp_gen(last_temp, increasing)
+            t.add(last_temp)
+            t.update()
+
+            if t.heating_on:
+                e += 1
+                maximum = t.temperature_average_f() + temp_by_s(t.heat_for_s)
+                last_temp = maximum
+                if abs(maximum - c.max_temp_f) < .05:
+                    works = True
+                    break
+                [t.add(maximum + j*.01) for j in range(t.queue.cap)]
+                t.heating_on = False
+                t.waiting_for_temp_decrease = True
+
+        self.assertTrue(works, msg="Failed to learn the correct temperature.")
+        print('NOTE: heating steady after {} learned updates'.format(e))

@@ -19,7 +19,16 @@ SENSOR = Adafruit_DHT.DHT22
 
 conf = Config()
 conf.load()
-temperature = Temperature(conf)
+
+temperature = Temperature(
+    conf,
+    queue_size=10,
+    debug=False,
+    cool_for_s=20.,
+    heat_for_s=20.,
+    has_cooler=True,
+    has_heater=False,
+    recently_minutes=5.)
 humidity = Humidity(conf)
 
 
@@ -37,17 +46,8 @@ if conf.humidity_pin is not None:
     g.setup(conf.humidity_pin, g.OUT)
 
 
-cool_seconds = clip(
-    learn_cool.load_last_cool(default_seconds=30.),
-    # at least 10 seconds
-    10.,
-    # at most 5 minutes
-    60. * 5.)
-
-
 #### HELPER FUNCTIONS ####
 def record_data(t, tavg, h, havg):
-    # RECORD THE TEMPERATURE
     with open('data.csv', 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([
@@ -93,18 +93,6 @@ def get_data_wait():
     return h, t
 
 
-def wait_until_increasing(increase_at_least=.2):
-    min_temp = 200.
-    while True:
-        h, t = get_data_wait()
-
-        min_temp = min(temperature.average(), min_temp)
-        if (temperature.average() - min_temp) > increase_at_least:
-            return min_temp
-
-        time.sleep(1)
-
-
 if __name__ == '__main__':
     # loop forever
     while True:
@@ -114,60 +102,7 @@ if __name__ == '__main__':
         logging.debug('t={:.2f},t.avg={:.2f},cooling={}'.format(t, temperature.average(), temperature.cooling))
 
         if conf.cool_pin is not None:
-            if temperature.cooling:
-                # we need to cool, so turn on the cooler on wait for a bit
-                cool_for = cool_seconds
-                max_temp = conf.target_temp_f + conf.temp_pad
-                temp_diff = temperature.average() - max_temp
-                learn = True
-                if temp_diff > .2:
-                    # we're really warm, so the cooler might be turning on
-                    # for the first time, the power went out, etc. So we need
-                    # to run for longer.
-                    learn = False
-                    # cool_for should be the seconds to cool for each degree,
-                    # and since we typically cool down by conf.temp_pad * 2.,
-                    # we need to divide by that amount to get the number of
-                    # seconds per degree
-                    cool_for = cool_seconds / (conf.temp_pad * 2.)
-                    # use an 90% multiplier so it doesn't overcool
-                    cool_for = temp_diff * cool_for * .9
-
-                logging.debug('cool_seconds={:.1f},cool_for={:.1f},max_temp={:.2f}'.format(cool_seconds, cool_for, max_temp))
-                g.output(conf.cool_pin, ON)
-                while cool_for > 0:
-                    time.sleep(1 if cool_for > 1 else cool_for)
-                    h, t = get_data_wait()
-                    cool_for -= 1
-
-                # stop cooling
-                g.output(conf.cool_pin, OFF)
-                temperature.cooling = False
-
-                # wait until the temperature settles and starts increasing
-                min_temp = wait_until_increasing()
-                logging.debug('temp is now increasing. min={:.2f}'.format(min_temp))
-
-                if learn:
-                    # save what we learned
-                    learn_cool.save_cool(cool_seconds, min_temp)
-
-                    # learn the correct amount of time to wait
-                    # ----------------------------------------------------------
-                    # get the difference in temps; will be positive if we
-                    # overshot
-                    diff = (conf.target_temp_f - conf.temp_pad) - min_temp
-                    # multiply by 10 for a rough estimate of the amount of
-                    # change in seconds
-                    #   .01*f -> .03s
-                    #   .1*f  -> .3s
-                    #   1*f   -> 3s
-                    diff *= 3.
-                    # update the number of seconds to cool for
-                    cool_seconds = cool_seconds - diff
-                    cool_seconds = clip(cool_seconds, 10., 60. * 5.)
-            else:
-                g.output(conf.cool_pin, OFF)
+            g.output(conf.cool_pin, ON if temperature.cooling_on else OFF)
 
         # TODO enable humidity learning
         if conf.humidity_pin is not None:
