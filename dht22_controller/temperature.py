@@ -4,7 +4,6 @@ from dht22_controller import learn_cool
 from datetime import timedelta
 import logging
 
-LAST = 3.0
 
 logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
 
@@ -34,6 +33,8 @@ class Temperature(object):
         self.last_maximum = None
         self.waiting_for_temp_increase = False
         self.waiting_for_temp_decrease = False
+        self.start_cool_temp = None
+        self.start_heat_temp = None
 
     def add(self, temperature):
         """
@@ -123,11 +124,6 @@ class Temperature(object):
             # --------------------------------
 
             if self.waiting_for_temp_increase:
-                # should only wait for a temperature increase if we've just
-                # cooled, which only happens if we have a cooler
-                if not self.has_cooler:
-                    self.waiting_for_temp_increase = False
-
                 # we just ran the cooler and are waiting for the temp to increase
                 if t >= self.last_minimum + .2:
                 # if self.temp_direction() == 1:
@@ -137,12 +133,7 @@ class Temperature(object):
 
                     cool_for = self.cool_for_s
                     temp_diff = t - self.config.max_temp_f
-                    learn = True
                     if temp_diff >= .25:
-                        # we're really warm, so the cooler might be turning on
-                        # for the first time, the power went out, etc. so we
-                        # need to run for longer.
-                        learn = False
                         # s_per_f should be the seconds to cool for each degree,
                         # and since we typically cool down by temp_pad * 2.,
                         # we need to divide by that amount to get the number of
@@ -150,42 +141,39 @@ class Temperature(object):
                         s_per_f = cool_for / (self.config.temp_pad * 2.)
                         cool_for = temp_diff * s_per_f
 
-                    if learn:
-                        if not self.debug:
-                            # save what we learned from the last time
-                            learn_cool.save_cool(cool_for, self.last_minimum)
+                    if not self.debug:
+                        # save what we learned from the last time
+                        learn_cool.save_cool(cool_for, self.start_cool_temp, self.last_minimum)
+                        self.start_cool_temp = None
 
-                        # ----------------------------------------
-                        # learn the correct amount of time to wait
-                        # ----------------------------------------
+                    # ----------------------------------------
+                    # learn the correct amount of time to wait
+                    # ----------------------------------------
 
-                        # get the difference in temps; will be positive if we
-                        # overshot
-                        diff = self.config.min_temp_f - self.last_minimum
+                    # get the difference in temps; will be positive if we
+                    # overshot
+                    diff = self.config.min_temp_f - self.last_minimum
 
-                        # multiply by 3 for a rough estimate of the amount of
-                        # change in seconds
-                        # examples:
-                        # ---------
-                        #   0.01*f -> 0.03s
-                        #   0.10*f -> 0.30s
-                        #   1.00*f -> 3.00s
-                        diff = 3.0*diff
+                    # multiply by 3 for a rough estimate of the amount of
+                    # change in seconds
+                    # examples:
+                    # ---------
+                    #   0.01*f -> 0.03s
+                    #   0.10*f -> 0.30s
+                    #   1.00*f -> 3.00s
+                    diff = 3.0*diff
 
-                        # update the number of seconds to cool for
-                        self.cool_for_s = clip(cool_for - diff, 10., 60. * 5.)
+                    # update the number of seconds to cool for
+                    self.cool_for_s = clip(cool_for - diff, 10., 60. * 5.)
             elif self.waiting_for_temp_decrease:
-                # should only wait for a temperature decrease if we've just
-                # heated, which only happens if we have a heater
-                if not self.has_heater:
-                    self.waiting_for_temp_decrease = False
-
                 # we just ran the heater and are waiting for the temp to decrease
                 if t <= self.last_maximum - .2:
                 # if self.temp_direction() == -1:
                     self.waiting_for_temp_decrease = False
                     if not self.debug:
                         logging.debug('temp is now decreasing. max={:.2f}'.format(self.last_maximum))
+
+                    # TODO IMPLEMENT ME
                     # learn
                     pass
             elif t >= self.config.max_temp_f:
@@ -196,6 +184,7 @@ class Temperature(object):
                 self.cooling_on = True
                 self.cooler_enabled_at = now()
                 self.last_minimum = t
+                self.start_cool_temp = t
             elif t <= self.config.min_temp_f:
                 if self.cooled_recently(): return
                 if not self.has_heater: return
@@ -204,6 +193,7 @@ class Temperature(object):
                 self.heating_on = True
                 self.heater_enabled_at = now()
                 self.last_maximum = t
+                self.start_heat_temp = t
             else:
                 pass
 
