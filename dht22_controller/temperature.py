@@ -142,6 +142,7 @@ class Temperature(object):
 
             if self.waiting_for_temp_increase:
                 # we just ran the cooler and are waiting for the temp to increase
+                if self.cooled_recently(1.): return
                 if t < self.last_minimum + .2:
                     return
 
@@ -173,6 +174,7 @@ class Temperature(object):
                     cool_for - diff, min_cool_time_s, max_cool_time_s)
             elif self.waiting_for_temp_decrease:
                 # we just ran the heater and are waiting for the temp to decrease
+                if self.heated_recently(1.): return
                 if t > self.last_maximum - .2:
                     return
 
