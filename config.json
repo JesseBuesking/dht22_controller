@@ -2,8 +2,9 @@
     "pin": 5,
     "target_temp_f": 64,
     "temp_pad": 1,
-    "target_humidity": 70,
+    "target_humidity": 72.5,
     "humidity_pad": 2,
     "cool_pin": 17,
-    "humidity_pin": 16
+    "humidity_pin": 16,
+    "dehumidity_pin": 22
 }

@@ -1,4 +1,4 @@
-from bbds import config
+from dht22_controller import config
 from termcolor import colored as c
 
 

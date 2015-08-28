@@ -9,7 +9,6 @@ import RPi.GPIO as g
 from dht22_controller.config import Config
 from dht22_controller.temperature import Temperature, c_to_f
 from dht22_controller.humidity import Humidity
-from dht22_controller import learn_cool
 from dht22_controller.utils import clip
 import logging
 logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
@@ -29,7 +28,13 @@ temperature = Temperature(
     has_cooler=True,
     has_heater=False,
     recently_minutes=5.)
-humidity = Humidity(conf)
+humidity = Humidity(
+    conf,
+    queue_size=10,
+    debug=False,
+    has_humidifier=False,
+    has_dehumidifier=True,
+    recently_minutes=5.)
 
 
 # Reversed since that's what's working for me (must have reversed polarity
@@ -42,13 +47,13 @@ OFF = True
 if conf.cool_pin is not None:
     g.setup(conf.cool_pin, g.OUT)
 
-if conf.humidity_pin is not None:
-    g.setup(conf.humidity_pin, g.OUT)
+if conf.dehumidity_pin is not None:
+    g.setup(conf.dehumidity_pin, g.OUT)
 
 
 #### HELPER FUNCTIONS ####
 def record_data(t, tavg, h, havg):
-    with open('data.csv', 'a') as csvfile:
+    with open('/home/pi/controller_data/data.csv', 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([
             # current datetime
@@ -87,7 +92,7 @@ def get_data_wait():
         temperature.update()
 
         # record the data to csv
-        record_data(t, temperature.average(), h, humidity.average())
+        record_data(t, temperature.temperature_average_f(), h, humidity.average())
         break
 
     return h, t
@@ -98,15 +103,13 @@ if __name__ == '__main__':
     while True:
         h, t = get_data_wait()
 
-        logging.debug('h={:.2f},h.avg={:.2f},humidifying={}'.format(h, humidity.average(), humidity.humidifying))
-        logging.debug('t={:.2f},t.avg={:.2f},cooling={}'.format(t, temperature.average(), temperature.cooling))
+        logging.debug('h={:.2f},h.avg={:.2f},dehumidifier_on={}'.format(h, humidity.average(), humidity.dehumidifier_on))
+        logging.debug('t={:.2f},t.avg={:.2f},cooling={}'.format(t, temperature.temperature_average_f(), temperature.cooling_on))
 
         if conf.cool_pin is not None:
             g.output(conf.cool_pin, ON if temperature.cooling_on else OFF)
 
-        # TODO enable humidity learning
-        if conf.humidity_pin is not None:
-            g.output(conf.humidity_pin, OFF)
-            # g.output(conf.humidity_pin, ON if humidity.humidifying else OFF)
+        if conf.dehumidity_pin is not None:
+            g.output(conf.dehumidity_pin, ON if humidity.dehumidifier_on else OFF)
 
         time.sleep(1)

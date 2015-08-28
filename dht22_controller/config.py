@@ -1,5 +1,17 @@
 import json
 from os.path import dirname, join
+import os
+
+CURRENTOS = 'linux'
+ISWINDOWS = False
+ISLINUX = False
+
+if os.name == 'posix':
+    CURRENTOS = 'linux'
+    ISLINUX = True
+elif os.name == 'nt':
+    CURRENTOS = 'windows'
+    ISWINDOWS = True
 
 class Config(object):
 
@@ -24,6 +36,10 @@ class Config(object):
     @property
     def humidity_pin(self):
         return self.config.get('humidity_pin', None)
+
+    @property
+    def dehumidity_pin(self):
+        return self.config.get('dehumidity_pin', None)
 
     @property
     def cool_pin(self):

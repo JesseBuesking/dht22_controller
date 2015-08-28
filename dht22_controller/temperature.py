@@ -20,8 +20,8 @@ class Temperature(object):
         self.queue = CappedQueue(cap=queue_size)
         self.config = config
         self.debug = debug
-        self.learn_cool_file = "lcool.csv"
-        self.learn_heat_file = "lheat.csv"
+        self.learn_cool_file = "/home/pi/controller_data/lcool.csv"
+        self.learn_heat_file = "/home/pi/controller_data/lheat.csv"
         self.cool_for_s = self.load_cool(cool_for_s)
         self.heat_for_s = self.load_heat(heat_for_s)
         self.has_heater = has_heater
@@ -30,8 +30,8 @@ class Temperature(object):
         self.heating_on = False
         self.cooler_enabled_at = None
         self.heater_enabled_at = None
-        self.last_cooling = now()
-        self.last_heating = now()
+        self.last_cooling = now() - timedelta(minutes=recently_minutes)
+        self.last_heating = now() - timedelta(minutes=recently_minutes)
         self.last_minimum = None
         self.last_maximum = None
         self.waiting_for_temp_increase = False
@@ -45,7 +45,7 @@ class Temperature(object):
             self.config.min_temp_f)
 
     def save_cool(self, seconds, starting_temp, resulting_temp):
-        save(self.learn_cool_file, starting_temp, conf.min_temp_f,
+        save(self.learn_cool_file, starting_temp, self.config.min_temp_f,
             resulting_temp, seconds)
 
     def load_heat(self, default_seconds=45.):
@@ -53,7 +53,7 @@ class Temperature(object):
             self.config.max_temp_f)
 
     def save_heat(self, seconds, starting_temp, resulting_temp):
-        save(self.learn_heat_file, starting_temp, conf.max_temp_f,
+        save(self.learn_heat_file, starting_temp, self.config.max_temp_f,
             resulting_temp, seconds)
 
     def add(self, temperature):
@@ -90,19 +90,19 @@ class Temperature(object):
         if self.heater_enabled_at is None: return None
         return now() - self.heater_enabled_at
 
-    def cooled_recently(self):
+    def cooled_recently(self, minutes=None):
         """
         Have we cooled recently?
         """
-        return (now() - self.last_cooling) <= timedelta(
-            minutes=self.recently_minutes)
+        minutes = self.recently_minutes if minutes is None else minutes
+        return (now() - self.last_cooling) <= timedelta(minutes=minutes)
 
-    def heated_recently(self):
+    def heated_recently(self, minutes=None):
         """
         Have we heated recently?
         """
-        return (now() - self.last_heating) <= timedelta(minutes=
-            self.recently_minutes)
+        minutes = self.recently_minutes if minutes is None else minutes
+        return (now() - self.last_heating) <= timedelta(minutes=minutes)
 
     def update(self):
         """
@@ -158,10 +158,11 @@ class Temperature(object):
                     target=self.config.min_temp_f,
                     actual=self.last_minimum,
                     debug=self.debug,
-                    multiplier=3.0)
+                    multiplier=3.0,
+                    increasing=False)
                 if not self.debug:
                     logging.debug(
-                        'last_s={:1.f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
+                        'last_s={:.1f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
                             self.cool_for_s, cool_for, self.config.min_temp_f,
                             self.last_minimum))
 
@@ -188,10 +189,11 @@ class Temperature(object):
                     target=self.config.max_temp_f,
                     actual=self.last_maximum,
                     debug=self.debug,
-                    multiplier=3.0)
+                    multiplier=3.0,
+                    increasing=True)
                 if not self.debug:
                     logging.debug(
-                        'last_s={:1.f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
+                        'last_s={:.1f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
                             self.heat_for_s, heat_for, self.config.max_temp_f,
                             self.last_maximum))
 
@@ -202,6 +204,7 @@ class Temperature(object):
                     heat_for + diff, min_heat_time_s, max_heat_time_s)
             elif t >= self.config.max_temp_f:
                 if self.heated_recently(): return
+                if self.cooled_recently(2.5): return
                 if not self.has_cooler: return
                 # if it's warm and we weren't just running a heater, turn
                 # our cooling on
@@ -209,7 +212,18 @@ class Temperature(object):
                 self.cooler_enabled_at = now()
                 self.last_minimum = t
                 self.start_cool_temp = t
+
+                min_cool_time_s = 10.
+                max_cool_time_s = 60. * 5.
+                self.cool_for_s = clip(
+                    time_boost(
+                        self.cool_for_s, t, self.config.max_temp_f, self.config.temp_pad, increasing=False),
+                    min_cool_time_s,
+                    max_cool_time_s)
+                if not self.debug:
+                    logging.debug('cooling for {:.2f}s'.format(self.cool_for_s))
             elif t <= self.config.min_temp_f:
+                if self.heated_recently(2.5): return
                 if self.cooled_recently(): return
                 if not self.has_heater: return
                 # if it's cool and we weren't just running a cooler, turn
@@ -218,6 +232,16 @@ class Temperature(object):
                 self.heater_enabled_at = now()
                 self.last_maximum = t
                 self.start_heat_temp = t
+
+                min_heat_time_s = 3.
+                max_heat_time_s = 60. * 5.
+                self.heat_for_s = clip(
+                    time_boost(
+                        self.heat_for_s, t, self.config.min_temp_f, self.config.temp_pad, increasing=True),
+                    min_heat_time_s,
+                    max_heat_time_s)
+                if not self.debug:
+                    logging.debug('heating for {:.2f}s'.format(self.heat_for_s))
             else:
                 pass
 

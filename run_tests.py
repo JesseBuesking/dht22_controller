@@ -2,12 +2,13 @@ import sys
 import unittest
 from tests import basic
 from tests import temperature
+from tests import humidity
 from tests.custom_text_test_runner import CustomTextTestRunner
 
 
 def load(testcase):
     return unittest.TestLoader().loadTestsFromTestCase(testcase)
-    
+
 
 def filter_tests(test_or_suite, test_cases_or_names, include=False):
     if isinstance(test_or_suite, unittest.TestSuite):
@@ -56,10 +57,12 @@ def parse_args(args):
 if __name__ == '__main__':
     basic_suite = load(basic.BasicTests)
     temp_suite = load(temperature.TemperatureTests)
+    humi_suite = load(humidity.HumidityTests)
 
     all_tests = unittest.TestSuite([
         basic_suite,
-        temp_suite
+        temp_suite,
+        humi_suite
     ])
 
     opts = parse_args(sys.argv)
