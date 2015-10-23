@@ -124,7 +124,9 @@ class Temperature(object):
                 self.waiting_for_temp_increase = True
                 # we're overshooting the temp, so set the time to cool for
                 # equal to the current elapsed time
-                if overshooting: self.cool_for_s = self.cooling_for()
+                if overshooting:
+                    self.cool_for_s = self.cooling_for()
+                    log.info("overshooting, cool_for_s now %s", self.cool_for_s)
         elif self.heating_on:
             secs_reached = self.heating_for() >= timedelta(seconds=self.heat_for_s)
             overshooting = t > self.config.max_temp_f # overshooting the temp
@@ -134,7 +136,9 @@ class Temperature(object):
                 self.waiting_for_temp_decrease = True
                 # we're overshooting the temp, so set the time to cool for
                 # equal to the current elapsed time
-                if overshooting: self.cool_for_s = self.heating_for()
+                if overshooting:
+                    self.heat_for_s = self.heating_for()
+                    log.info("overshooting, heat_for_s now %s", self.heat_for_s)
         else:
             # --------------------------------
             # not currently heating or cooling
