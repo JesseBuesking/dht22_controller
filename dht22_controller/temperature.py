@@ -3,10 +3,10 @@ from dht22_controller.utils import now, clip
 from dht22_controller.learn import *
 from dht22_controller.datastore import load, save
 from datetime import timedelta
+
+
 import logging
-
-
-logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 
 def c_to_f(value):
@@ -147,8 +147,7 @@ class Temperature(object):
                     return
 
                 self.waiting_for_temp_increase = False
-                if not self.debug:
-                    logging.debug('temp is now increasing. min={:.2f}'.format(self.last_minimum))
+                log.debug('temp is now increasing. min=%.02f', self.last_minimum)
 
                 cool_for, diff = learn(
                     save=self.save_cool,
@@ -161,11 +160,12 @@ class Temperature(object):
                     debug=self.debug,
                     multiplier=3.0,
                     increasing=False)
-                if not self.debug:
-                    logging.debug(
-                        'last_s={:.1f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
-                            self.cool_for_s, cool_for, self.config.min_temp_f,
-                            self.last_minimum))
+                log.debug(
+                    'last_s=%.01f run_s=%.01f target=%.02f actual=%.02f',
+                    self.cool_for_s,
+                    cool_for,
+                    self.config.min_temp_f,
+                    self.last_minimum)
 
                 # update the number of seconds to cool for
                 min_cool_time_s = 10.
@@ -179,8 +179,7 @@ class Temperature(object):
                     return
 
                 self.waiting_for_temp_decrease = False
-                if not self.debug:
-                    logging.debug('temp is now decreasing. max={:.2f}'.format(self.last_maximum))
+                log.debug('temp is now decreasing. max=%.02f', self.last_maximum)
 
                 heat_for, diff = learn(
                     save=self.save_heat,
@@ -193,11 +192,12 @@ class Temperature(object):
                     debug=self.debug,
                     multiplier=3.0,
                     increasing=True)
-                if not self.debug:
-                    logging.debug(
-                        'last_s={:.1f},run_s={:.1f},target={:.2f},actual={:.2f}'.format(
-                            self.heat_for_s, heat_for, self.config.max_temp_f,
-                            self.last_maximum))
+                log.debug(
+                    'last_s=%.01f run_s=%.01f target=%.02f actual=%.02f',
+                    self.heat_for_s,
+                    heat_for,
+                    self.config.max_temp_f,
+                    self.last_maximum)
 
                 # update the number of seconds to heat for
                 min_heat_time_s = 3.
@@ -222,8 +222,7 @@ class Temperature(object):
                         self.cool_for_s, t, self.config.max_temp_f, self.config.temp_pad, increasing=False),
                     min_cool_time_s,
                     max_cool_time_s)
-                if not self.debug:
-                    logging.debug('cooling for {:.2f}s'.format(self.cool_for_s))
+                log.debug('cooling for %.02fs', self.cool_for_s)
             elif t <= self.config.min_temp_f:
                 if self.heated_recently(2.5): return
                 if self.cooled_recently(): return
@@ -243,7 +242,7 @@ class Temperature(object):
                     min_heat_time_s,
                     max_heat_time_s)
                 if not self.debug:
-                    logging.debug('heating for {:.2f}s'.format(self.heat_for_s))
+                    log.debug('heating for %.02fs', self.heat_for_s)
             else:
                 pass
 

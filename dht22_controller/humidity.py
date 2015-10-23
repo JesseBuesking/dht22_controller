@@ -1,10 +1,10 @@
 from dht22_controller.capped_queue import CappedQueue
 from dht22_controller.utils import now, clip
 from datetime import timedelta
+
+
 import logging
-
-
-logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 
 class Humidity(object):
@@ -62,7 +62,7 @@ class Humidity(object):
         self.last_maximum = max(h, self.last_maximum)
         self.last_minimum = min(h, self.last_minimum)
 
-        logging.debug('h={},max={}'.format(h, self.config.max_humidity))
+        log.debug('h=%.02f max=%.02f', h, self.config.max_humidity)
         if self.humidifier_on:
             if h < self.config.max_humidity:
                 return

@@ -1,7 +1,5 @@
 import logging
-
-
-logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 
 __all__ = [

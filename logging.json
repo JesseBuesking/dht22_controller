@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "formatters": {
+    "detailed": {
+      "format": "%(asctime)s.%(msecs)03d [%(lineno)4d] %(module)-12s %(funcName)-25s %(levelname)-8s: %(message)s",
+      "datefmt": "%M:%S"
+    }
+  },
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "level": "DEBUG",
+      "formatter": "detailed",
+      "stream": "ext://sys.stdout"
+    },
+    "debugfile": {
+      "class": "logging.FileHandler",
+      "level": "DEBUG",
+      "formatter": "detailed",
+      "filename": "/var/log/dht22_controller.log",
+      "mode": "a"
+    }
+  },
+  "loggers": {
+    "bbds": {
+      "level": "DEBUG",
+      "propagate": "no"
+    }
+  },
+  "root": {
+    "level": "DEBUG",
+    "handlers": ["console", "debugfile"]
+  }
+}

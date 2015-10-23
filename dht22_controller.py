@@ -1,4 +1,7 @@
 #!/usr/bin/python
+from dht22_controller._logging import setup_logging
+setup_logging(default_path="/home/pi/dht22_controller/logging.json")
+
 
 import csv
 from datetime import datetime
@@ -10,8 +13,11 @@ from dht22_controller.config import Config
 from dht22_controller.temperature import Temperature, c_to_f
 from dht22_controller.humidity import Humidity
 from dht22_controller.utils import clip
+
+
 import logging
-logging.basicConfig(filename="/tmp/dht22_controller.log", level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
 
 g.setmode(g.BCM)
 SENSOR = Adafruit_DHT.DHT22
@@ -99,17 +105,31 @@ def get_data_wait():
 
 
 if __name__ == '__main__':
-    # loop forever
-    while True:
-        h, t = get_data_wait()
+    try:
+        log.info(80*"=")
+        log.info("starting dht22_controller")
+        log.info(80*"=")
+        log.info("")
+        
+        # loop forever
+        while True:
+            h, t = get_data_wait()
 
-        logging.debug('h={:.2f},h.avg={:.2f},dehumidifier_on={}'.format(h, humidity.average(), humidity.dehumidifier_on))
-        logging.debug('t={:.2f},t.avg={:.2f},cooling={}'.format(t, temperature.temperature_average_f(), temperature.cooling_on))
+            log.debug(
+                'h=%.02f (avg=%.02f) dehumid=%s | t=%.02f (avg=%.02f) cool=%s',
+                h, humidity.average(),
+                'on' if humidity.dehumidifier_on else 'off',
+                t, temperature.temperature_average_f(),
+                'on' if temperature.cooling_on else 'off',
+                )
 
-        if conf.cool_pin is not None:
-            g.output(conf.cool_pin, ON if temperature.cooling_on else OFF)
+            if conf.cool_pin is not None:
+                g.output(conf.cool_pin, ON if temperature.cooling_on else OFF)
 
-        if conf.dehumidity_pin is not None:
-            g.output(conf.dehumidity_pin, ON if humidity.dehumidifier_on else OFF)
+            if conf.dehumidity_pin is not None:
+                g.output(conf.dehumidity_pin, ON if humidity.dehumidifier_on else OFF)
 
-        time.sleep(1)
+            time.sleep(1)
+    except Exception as e:
+        log.exception("an exception occurred in the main loop")
+        raise
